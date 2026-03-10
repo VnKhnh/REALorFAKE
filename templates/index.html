@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Âm thanh thông minh | AI Sound Classification</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4cc9f0;
+            --dark-color: #1a1a2e;
+            --light-color: #f8f9fa;
+            --success-color: #4caf50;
+            --danger-color: #f44336;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark-color);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 12px;
+            transition: width 1s ease-in-out;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(67, 97, 238, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
+        }
+        
+        .upload-area {
+            border: 2px dashed #aaa;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .upload-area.active {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .result-card {
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        .model-select {
+            background-color: rgba(67, 97, 238, 0.1);
+            border: 1px solid rgba(67, 97, 238, 0.3);
+        }
+        
+        footer {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Header -->
+                <div class="text-center mb-5 animate__animated animate__fadeIn">
+                    <h1 class="display-4 fw-bold mb-3" style="color: var(--primary-color);">
+                        <i class="fas fa-wave-square me-2"></i>Âm thanh thông minh
+                    </h1>
+                    <p class="lead text-muted">
+                        Tải lên tệp âm thanh và để AI phân loại nội dung của nó bằng các mô hình học máy tiên tiến
+                    </p>
+                </div>
+                
+                <!-- Main Card -->
+                <div class="glass-card p-4 mb-4 animate__animated animate__fadeInUp">
+                    <h3 class="mb-4"><i class="fas fa-microphone-alt me-2"></i>Phân loại âm thanh</h3>
+                    
+                    <form id="uploadForm">
+                        <!-- Model Selection -->
+                        <div class="mb-4">
+                            <label for="modelSelect" class="form-label fw-bold">
+                                <i class="fas fa-brain me-2"></i>Chọn mô hình
+                            </label>
+                            <select class="form-select model-select py-3" id="modelSelect" required>
+                                {% for model in models %}
+                                <option value="{{ model }}">{{ model }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- File Upload -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-music me-2"></i>Tải dữ liệu âm thanh
+                            </label>
+                            <div class="upload-area" id="uploadArea">
+                                <input type="file" id="audioFile" accept=".wav,.mp3,.ogg,.flac" class="d-none">
+                                <div class="py-4">
+                                    <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: var(--primary-color);"></i>
+                                    <h5>Kéo & Thả hoặc Nhấp để Duyệt</h5>
+                                    <p class="text-muted small">Hỗ trợ định dạng: WAV, MP3, OGG, FLAC</p>
+                                    <div class="selected-file mt-3" id="selectedFile" style="display: none;">
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-file-audio me-1"></i>
+                                            <span id="fileName"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg py-3" id="submitBtn">
+                                <i class="fas fa-play-circle me-2"></i>Phân tích
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Results Section -->
+                <div class="glass-card p-4 mb-4 animate__animated animate__fadeInUp" id="resultBox" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Kết quả phân tích</h3>
+                        <span class="badge bg-primary rounded-pill" id="modelBadge"></span>
+                    </div>
+                    
+                    <div class="result-card p-4 mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="fw-bold">Lớp dự đoán:</h5>
+                                <h2 class="fw-bold text-primary" id="predictedClass"></h2>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="fw-bold">Độ tin cậy:</h5>
+                                <div class="d-flex align-items-center">
+                                    <h2 class="fw-bold me-3" id="confidence"></h2>
+                                    <div class="progress flex-grow-1">
+                                        <div class="progress-bar" id="confidenceBar" role="progressbar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mb-3"><i class="fas fa-list-ol me-2"></i>Chi tiết dự đoán</h4>
+                    <div id="allPredictions" class="row"></div>
+                </div>
+                
+                <!-- Error Box -->
+                <div class="alert alert-danger animate__animated animate__shakeX" id="errorBox" style="display: none;">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="errorMessage"></span>
+                </div>
+                
+                <!-- Loading Indicator -->
+                <div class="text-center py-5" id="loadingIndicator" style="display: none;">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h4 class="mt-3">Phân tích...</h4>
+                    <p class="text-muted">This may take a few moments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <!--<footer class="container py-4 mt-5 text-center">
+        <p class="mb-0 text-muted">
+            <i class="fas fa-code me-1"></i> Powered by Flask & TensorFlow | 
+            <i class="fas fa-user-shield me-1"></i> Your audio files are processed locally and never uploaded to servers
+        </p>
+    </footer> -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const audioFileInput = document.getElementById('audioFile');
+        const selectedFileDiv = document.getElementById('selectedFile');
+        const fileNameSpan = document.getElementById('fileName');
+        
+        uploadArea.addEventListener('click', () => {
+            audioFileInput.click();
+        });
+        
+        audioFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                const file = e.target.files[0];
+                fileNameSpan.textContent = file.name;
+                selectedFileDiv.style.display = 'block';
+                uploadArea.classList.add('active');
+            }
+        });
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('active');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('active');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('active');
+            
+            if (e.dataTransfer.files.length) {
+                audioFileInput.files = e.dataTransfer.files;
+                const file = e.dataTransfer.files[0];
+                fileNameSpan.textContent = file.name;
+                selectedFileDiv.style.display = 'block';
+            }
+        });
+        
+        // Form submission
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const fileInput = document.getElementById('audioFile');
+            const modelSelect = document.getElementById('modelSelect');
+            const resultBox = document.getElementById('resultBox');
+            const errorBox = document.getElementById('errorBox');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            
+            // Reset UI
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            errorBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            loadingIndicator.style.display = 'block';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('model', modelSelect.value);
+                
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Display results
+                document.getElementById('modelBadge').textContent = data.model;
+                document.getElementById('predictedClass').textContent = data.predicted_class;
+                document.getElementById('confidence').textContent = `${data.confidence}%`;
+                
+                // Animate progress bar
+                const progressBar = document.getElementById('confidenceBar');
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.style.width = `${data.confidence}%`;
+                }, 100);
+                
+                // Display all predictions
+                const allPredsDiv = document.getElementById('allPredictions');
+                allPredsDiv.innerHTML = '';
+                
+                for (const [cls, prob] of Object.entries(data.all_predictions)) {
+                    const percentage = (prob * 100).toFixed(2);
+                    const predCol = document.createElement('div');
+                    predCol.className = 'col-md-6 mb-3';
+                    
+                    const predCard = document.createElement('div');
+                    predCard.className = 'glass-card p-3 h-100';
+                    
+                    const predHeader = document.createElement('div');
+                    predHeader.className = 'd-flex justify-content-between mb-2';
+                    
+                    const predLabel = document.createElement('span');
+                    predLabel.className = 'fw-bold';
+                    predLabel.textContent = cls;
+                    
+                    const predValue = document.createElement('span');
+                    predValue.className = 'text-primary fw-bold';
+                    predValue.textContent = `${percentage}%`;
+                    
+                    const predProgress = document.createElement('div');
+                    predProgress.className = 'progress mt-2';
+                    
+                    const predProgressBar = document.createElement('div');
+                    predProgressBar.className = 'progress-bar';
+                    predProgressBar.style.width = `${percentage}%`;
+                    predProgressBar.style.backgroundColor = `hsl(${percentage * 1.2}, 100%, 45%)`;
+                    
+                    predHeader.appendChild(predLabel);
+                    predHeader.appendChild(predValue);
+                    predProgress.appendChild(predProgressBar);
+                    predCard.appendChild(predHeader);
+                    predCard.appendChild(predProgress);
+                    predCol.appendChild(predCard);
+                    allPredsDiv.appendChild(predCol);
+                }
+                
+                // Show results with animation
+                loadingIndicator.style.display = 'none';
+                resultBox.style.display = 'block';
+                resultBox.classList.add('animate__fadeInUp');
+                
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                errorBox.style.display = 'block';
+                document.getElementById('errorMessage').textContent = error.message;
+                errorBox.classList.add('animate__shakeX');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-play-circle me-2"></i>Analyze Audio';
+            }
+        });
+    </script>
+</body>
+</html>
